@@ -1,6 +1,6 @@
 # AIPI-590-Final-Project
 
-**Reflect**: In-context alignment through model self-critique and revision.
+**Reflect**: In-context alignment through model self-critique and revision.[^1]
 
 ![alt text](https://github.com/hbbell333/AIPI-590-Final-Project/blob/main/reflect_graphic.png "Logo Title Text 1")
 
@@ -19,7 +19,8 @@ During critique and revision the model is prompted to first generate a critique 
 
 
 ![alt text](https://github.com/hbbell333/AIPI-590-Final-Project/blob/main/inference_graphic.png)
+[^2]
 
 
-[^1]Cursor was used to create the streamlit_app.py
-[^2] Reflect algorithm code was adopted from work done in collaboration with Henry Bell, Mobasser Haque, Caroline Zhang, Samia Zaman, Dhaval Podtar, and Brandon Fain
+[^2]Cursor was used to create the streamlit_app.py
+[^1] Reflect algorithm code was adopted from work done in collaboration with Henry Bell, Mobasser Haque, Caroline Zhang, Samia Zaman, Dhaval Podtar, and Brandon Fain
