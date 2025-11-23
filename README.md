@@ -22,4 +22,5 @@ During critique and revision the model is prompted to first generate a critique 
 
 
 \* Cursor was used to create the streamlit_app.py
+
 \* Reflect algorithm code was adopted from work done in collaboration with Henry Bell, Mobasser Haque, Caroline Zhang, Samia Zaman, Dhaval Podtar, and Brandon Fain
