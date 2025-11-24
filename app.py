@@ -4,33 +4,30 @@ import streamlit as st
 from dotenv import load_dotenv
 from openai import OpenAI
 
-# ==========================
-# LOAD ENV / API KEY
-# ==========================
-load_dotenv()
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+from dotenv import load_dotenv
 
-# On Streamlit Cloud: Place OPENAI_API_KEY in Secrets manager.
+# Load .env only for local development
+load_dotenv()
+
+OPENAI_API_KEY = (
+    os.environ.get("OPENAI_API_KEY") or
+    st.secrets.get("OPENAI_API_KEY")
+)
+
 if not OPENAI_API_KEY:
     st.error(
         "OPENAI_API_KEY not found.\n\n"
-        "➡️ Create `.env` (locally) or set it in Streamlit Cloud Secrets.\n\n"
-        "Format:\nOPENAI_API_KEY=sk-xxxx"
+        "On **Streamlit Cloud**, add it in:\n"
+        "→ Settings → Secrets → `OPENAI_API_KEY = your_key`\n\n"
+        "On **local machine**, create a `.env` file:\n"
+        "OPENAI_API_KEY=your_key_here"
     )
     st.stop()
 
-
-# ==========================
-# OPENAI CLIENT (cached)
-# ==========================
 @st.cache_resource(show_spinner=False)
 def get_client():
     return OpenAI(api_key=OPENAI_API_KEY)
 
-
-# ==========================
-# OPENAI CHAT CALL
-# ==========================
 def call_openai(
     model: str,
     system_prompt: str,
@@ -53,9 +50,6 @@ def call_openai(
     return response.choices[0].message.content
 
 
-# ==========================
-# PROMPT BUILDERS
-# ==========================
 def build_system_prompt(constitution_text: str) -> str:
     lines = [l.strip() for l in constitution_text.splitlines() if l.strip()]
 
@@ -128,9 +122,6 @@ Return in this structure:
 """
 
 
-# ==========================
-# TEXT EXTRACTION
-# ==========================
 def extract_revised_response(full_text: str):
     reasoning = ""
     revised = full_text.strip()
@@ -144,9 +135,7 @@ def extract_revised_response(full_text: str):
     return reasoning, revised
 
 
-# ==========================
 # PIPELINE
-# ==========================
 def run_pipeline(
     model_name: str,
     user_prompt: str,
@@ -200,9 +189,7 @@ def run_pipeline(
     return base_response, critiques, reasons, current
 
 
-# ==========================
 # STREAMLIT UI
-# ==========================
 def main():
     st.set_page_config(page_title="Reflect", layout="wide")
     st.title("🧠 Reflect — In-context alignment via critique & revision")
@@ -241,12 +228,12 @@ This demo applies **Base → Critique → Revision** using *your custom constitu
         height=180,
     )
 
-    # ---- Chat History ----
+    # Chat History
     for msg in st.session_state.history:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
 
-    # ---- User Input ----
+    # User Input
     user_input = st.chat_input("Type your message...")
 
     if user_input:
@@ -266,7 +253,6 @@ This demo applies **Base → Critique → Revision** using *your custom constitu
             st.write(final)
             st.session_state.history.append({"role": "assistant", "content": final})
 
-            # ---- Debug Tabs ----
             st.markdown("---")
             tabs = st.tabs([
                 "Base Response",
