@@ -1,26 +1,36 @@
-
 import os
 import json
 import streamlit as st
-from openai import OpenAI
 from dotenv import load_dotenv
+from openai import OpenAI
 
-load_dotenv()   
-
+# ==========================
+# LOAD ENV / API KEY
+# ==========================
+load_dotenv()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
+# On Streamlit Cloud: Place OPENAI_API_KEY in Secrets manager.
 if not OPENAI_API_KEY:
     st.error(
         "OPENAI_API_KEY not found.\n\n"
-        "Create a `.env` file in the same folder as `app.py` with:\n\n"
-        "OPENAI_API_KEY=your_key_here"
+        "➡️ Create `.env` (locally) or set it in Streamlit Cloud Secrets.\n\n"
+        "Format:\nOPENAI_API_KEY=sk-xxxx"
     )
+    st.stop()
 
+
+# ==========================
+# OPENAI CLIENT (cached)
+# ==========================
 @st.cache_resource(show_spinner=False)
 def get_client():
-    """Initialize OpenAI client (cached once)."""
     return OpenAI(api_key=OPENAI_API_KEY)
 
+
+# ==========================
+# OPENAI CHAT CALL
+# ==========================
 def call_openai(
     model: str,
     system_prompt: str,
@@ -28,7 +38,6 @@ def call_openai(
     temperature: float = 0.3,
     max_tokens: int = 1024,
 ) -> str:
-    """Unified OpenAI call (ChatCompletion API)."""
     client = get_client()
 
     response = client.chat.completions.create(
@@ -44,8 +53,10 @@ def call_openai(
     return response.choices[0].message.content
 
 
+# ==========================
+# PROMPT BUILDERS
+# ==========================
 def build_system_prompt(constitution_text: str) -> str:
-    """Convert user-defined constitution into a numbered system prompt."""
     lines = [l.strip() for l in constitution_text.splitlines() if l.strip()]
 
     if not lines:
@@ -93,7 +104,6 @@ def build_revision_prompt(base_resp: str, critique_json: str, constitution: str)
 Revise the BASE_RESPONSE so that it satisfies ALL constitution principles.
 
 Follow the issues listed inside CRITIQUE_JSON.
-
 Do NOT mention critics or constitutions.
 Keep improvements minimal and concise.
 
@@ -106,7 +116,7 @@ BASE_RESPONSE:
 CRITIQUE_JSON:
 {critique_json}
 
-Return answer in this structure:
+Return in this structure:
 
 <REVISION_REASONING>
 (short explanation)
@@ -117,6 +127,10 @@ Return answer in this structure:
 </REVISED_RESPONSE>
 """
 
+
+# ==========================
+# TEXT EXTRACTION
+# ==========================
 def extract_revised_response(full_text: str):
     reasoning = ""
     revised = full_text.strip()
@@ -130,7 +144,9 @@ def extract_revised_response(full_text: str):
     return reasoning, revised
 
 
+# ==========================
 # PIPELINE
+# ==========================
 def run_pipeline(
     model_name: str,
     user_prompt: str,
@@ -154,8 +170,10 @@ def run_pipeline(
     reasons = []
 
     for _ in range(cycles):
-        # CRITIQUE
+
+        # ==== CRITIQUE ====
         critique_prompt = build_critique_prompt(current, constitution)
+
         critique_json = call_openai(
             model=model_name,
             system_prompt="Return JSON ONLY.",
@@ -164,38 +182,39 @@ def run_pipeline(
         )
         critiques.append(critique_json)
 
-        # REVISION
+        # ==== REVISION ====
         revision_prompt = build_revision_prompt(current, critique_json, constitution)
+
         revision_raw = call_openai(
             model=model_name,
             system_prompt="You revise responses carefully.",
             user_prompt=revision_prompt,
             temperature=revision_temp,
         )
-        reasoning, revised = extract_revised_response(revision_raw)
 
+        reasoning, revised = extract_revised_response(revision_raw)
         reasons.append(reasoning)
+
         current = revised
 
     return base_response, critiques, reasons, current
 
 
+# ==========================
 # STREAMLIT UI
+# ==========================
 def main():
     st.set_page_config(page_title="Reflect", layout="wide")
-    st.title("🧠 Reflect: In-context alignment through model self-critique and revision.")
-
-    if not OPENAI_API_KEY:
-        st.stop()
+    st.title("🧠 Reflect — In-context alignment via critique & revision")
 
     st.markdown("""
-This demo applies **Base → Critique → Revision** using *your own constitution*.
-""")
+This demo applies **Base → Critique → Revision** using *your custom constitution*.
+    """)
 
     if "history" not in st.session_state:
         st.session_state.history = []
 
-    # Sidebar
+    # ---- Sidebar ----
     st.sidebar.header("Settings")
 
     model_name = st.sidebar.selectbox(
@@ -205,8 +224,8 @@ This demo applies **Base → Critique → Revision** using *your own constitutio
     )
 
     cycles = st.sidebar.slider("Critique+Revision cycles", 1, 3, 1)
-    base_temp = st.sidebar.slider("Base temp", 0.0, 1.2, 0.7)
-    revision_temp = st.sidebar.slider("Revision temp", 0.0, 1.2, 0.3)
+    base_temp = st.sidebar.slider("Base response temperature", 0.0, 1.2, 0.7)
+    revision_temp = st.sidebar.slider("Revision temperature", 0.0, 1.2, 0.3)
 
     constitution_default = (
         "Avoid harmful or dangerous instructions.\n"
@@ -222,17 +241,19 @@ This demo applies **Base → Critique → Revision** using *your own constitutio
         height=180,
     )
 
+    # ---- Chat History ----
     for msg in st.session_state.history:
         with st.chat_message(msg["role"]):
             st.write(msg["content"])
 
+    # ---- User Input ----
     user_input = st.chat_input("Type your message...")
 
     if user_input:
         st.session_state.history.append({"role": "user", "content": user_input})
 
         with st.chat_message("assistant"):
-            with st.spinner("Applying constitution…"):
+            with st.spinner("Applying constitutional critique…"):
                 base, crits, reasons, final = run_pipeline(
                     model_name=model_name,
                     user_prompt=user_input,
@@ -245,7 +266,7 @@ This demo applies **Base → Critique → Revision** using *your own constitutio
             st.write(final)
             st.session_state.history.append({"role": "assistant", "content": final})
 
-            
+            # ---- Debug Tabs ----
             st.markdown("---")
             tabs = st.tabs([
                 "Base Response",
@@ -265,7 +286,7 @@ This demo applies **Base → Critique → Revision** using *your own constitutio
 
             with tabs[2]:
                 for i, r in enumerate(reasons, 1):
-                    st.markdown(f"### Revision Reasoning {i}")
+                    st.markdown(f"### Reasoning {i}")
                     st.write(r)
 
             with tabs[3]:
@@ -280,7 +301,7 @@ This demo applies **Base → Critique → Revision** using *your own constitutio
                     "revision_reasonings": reasons,
                     "final_response": final,
                 }
-                st.code(json.dumps(raw, indent=2, ensure_ascii=False))
+                st.code(json.dumps(raw, indent=2))
 
 
 if __name__ == "__main__":
