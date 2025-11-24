@@ -21,6 +21,6 @@ During critique and revision the model is prompted to first generate a critique 
 ![alt text](https://github.com/hbbell333/AIPI-590-Final-Project/blob/main/inference_graphic.png)
 
 
-\* GPT5 codex was used to assist in creating streamlit web app and fix deployment issues (GPT chat history shared in reference.txt attached)
+\* GPT5 codex was used to assist in creating streamlit web app and fix deployment issues (chat history shared in reference.txt attached)
 
 \* Reflect algorithm code was adopted from work done in collaboration with Henry Bell, Mobasser Haque, Caroline Zhang, Samia Zaman, Dhaval Podtar, and Brandon Fain
